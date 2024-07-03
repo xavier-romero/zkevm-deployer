@@ -1,0 +1,55 @@
+[Log]
+Environment = "development" # "production" or "development"
+Level = "info"
+Outputs = ["stdout"]
+
+[SyncDB]
+Database = "postgres"
+User = "bridge_user"
+Password = "bridge_password"
+Name = "bridge_db"
+Host = "zkevm-db"
+Port = "5432"
+
+[Etherman]
+L1URL = "READ FROM COMPOSE"
+L2URLs = "READ FROM COMPOSE"
+
+[Synchronizer]
+SyncInterval = "5s"
+SyncChunkSize = 100
+
+[BridgeController]
+Store = "postgres"
+Height = 32
+
+[BridgeServer]
+CacheSize = 100000
+GRPCPort = "9090"
+HTTPPort = "8080"
+DefaultPageLimit = 25
+MaxPageLimit = 100
+BridgeVersion = "v1"
+    [BridgeServer.DB]
+    Database = "postgres"
+    User = "bridge_user"
+    Password = "bridge_password"
+    Name = "bridge_db"
+    Host = "zkevm-db"
+    Port = "5432"
+
+[NetworkConfig]
+GenBlockNumber = "READ FROM COMPOSE"
+PolygonBridgeAddress = "READ FROM COMPOSE"
+PolygonZkEVMGlobalExitRootAddress = "READ FROM COMPOSE"
+PolygonRollupManagerAddress = "READ FROM COMPOSE"
+PolygonZkEvmAddress = "READ FROM COMPOSE"
+L2PolygonBridgeAddresses = "READ FROM COMPOSE"
+
+[ClaimTxManager]
+FrequencyToMonitorTxs = "1s"
+PrivateKey = {Path = "/app/claimtx.keystore", Password = "test"}
+Enabled = true
+RetryInterval = "1s"
+RetryNumber = 10
+AuthorizedClaimMessageAddresses = []

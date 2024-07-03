@@ -1,0 +1,5 @@
+README_SECRET.md
+output/
+.output*/
+*.keystore
+recover.py

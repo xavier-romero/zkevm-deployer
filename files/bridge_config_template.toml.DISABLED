@@ -1,0 +1,52 @@
+[Log]
+Level = "info"
+Outputs = ["stdout"]
+
+[SyncDB]
+Database = "postgres"
+User = "${DB_USER}"
+Password = "${DB_PASS}"
+Name = "${DB_NAME}"
+Host = "${DB_HOST}"
+Port = "5432"
+
+[Etherman]
+L1URL = "${L1_URL}"
+L2URLs = ["${L2_URL}"]
+
+[Synchronizer]
+SyncInterval = "5s"
+SyncChunkSize = 100
+
+[BridgeController]
+Store = "postgres"
+Height = 32
+
+[BridgeServer]
+CacheSize = 100000
+GRPCPort = "9090"
+HTTPPort = "8080"
+DefaultPageLimit = 25
+MaxPageLimit = 100
+BridgeVersion = "v1"
+    [BridgeServer.DB]
+    Database = "postgres"
+    User = "${DB_USER}"
+    Password = "${DB_PASS}"
+    Name = "${DB_NAME}"
+    Host = "${DB_ROHOST}"
+    Port = "5432"
+
+[NetworkConfig]
+GenBlockNumber = ${GEN_BLOCK_NUM}
+PolygonZkEVMAddress = "${POE_ADDR}"
+PolygonBridgeAddress = "${BRIDGE_ADDR}"
+PolygonZkEVMGlobalExitRootAddress = "${GLOBAL_EXIT_ROOT}"
+MaticTokenAddress = "${MATIC_ADDR}"
+L2PolygonBridgeAddresses = ["${L2_BRIDGE_ADDR}"]
+L1ChainID = ${L1_CHAIN_ID}
+
+[ClaimTxManager]
+FrequencyToMonitorTxs = "1s"
+PrivateKey = {Path = "/app/claimtxmanager.keystore", Password = "${CLAIMTX_KEYSTORE_PASSW}"}
+Enabled = true

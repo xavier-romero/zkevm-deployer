@@ -1,0 +1,291 @@
+version: "3.5"
+networks:
+  default:
+    name: zkevm
+    
+services:
+  zkevm-db:
+    container_name: zkevm-db
+    image: postgres:15
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          memory: 4G
+    ports:
+      - 5432:5432
+    volumes:
+      - ./config/init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./config/data-postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=master_user
+      - POSTGRES_PASSWORD=master_password
+      - POSTGRES_DB=master
+    command: >
+      postgres -N 500
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U master_user -d master"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  zkevm-executor:
+    container_name: zkevm-executor
+    image: ${ZKEVM_EXECUTOR}
+    ports:
+      - 50061:50061 # MT
+      - 50071:50071 # Executor
+    volumes:
+      - ./config/executor_config.json:/usr/src/app/config.json:ro
+    command: >
+      zkProver -c /usr/src/app/config.json
+    depends_on:
+      zkevm-db:
+        condition: service_healthy
+
+  zkevm-sync:
+    container_name: zkevm-sync
+    image: ${ZKEVM_NODE}
+    ports:
+      - 9095:9091 # needed if metrics enabled
+    environment:
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+      - ZKEVM_NODE_SEQUENCESENDER_L2COINBASE=${SEQUENCER_ADDR}
+    volumes:
+      - ./config/node_config.toml:/app/config.toml:ro
+      - ./config/genesis.json:/app/genesis.json:ro
+    restart: always
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components synchronizer"
+    depends_on:
+      zkevm-executor:
+        condition: service_started
+      zkevm-db:
+        condition: service_healthy
+
+  zkevm-l2gaspricer:
+    container_name: zkevm-l2gaspricer
+    image: ${ZKEVM_NODE}
+    environment:
+      - ZKEVM_NODE_SEQUENCESENDER_L2COINBASE=${SEQUENCER_ADDR}
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config/node_config.toml:/app/config.toml:ro
+      - ./config/genesis.json:/app/genesis.json:ro
+    restart: always
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components l2gaspricer"
+    depends_on:
+      zkevm-sync:
+        condition: service_started
+      zkevm-db:
+        condition: service_healthy
+
+  zkevm-rpc:
+    container_name: zkevm-rpc
+    image: ${ZKEVM_NODE}
+    ports:
+      - 0.0.0.0:8123:8123
+      - 0.0.0.0:8133:8133 # WS
+      - 9091:9091 # Metrics
+    environment:
+      - ZKEVM_NODE_SEQUENCESENDER_L2COINBASE=${SEQUENCER_ADDR}
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config/node_config.toml:/app/config.toml:ro
+      - ./config/genesis.json:/app/genesis.json:ro
+    restart: always
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components rpc --http.api \"eth,net,zkevm,txpool,web3,debug\""
+    depends_on:
+      zkevm-sync:
+        condition: service_started
+      zkevm-db:
+        condition: service_healthy
+      zkevm-l2gaspricer:
+        condition: service_started
+
+  zkevm-aggregator:
+    container_name: zkevm-aggregator
+    image: ${ZKEVM_NODE}
+    ports:
+      - 50081:50081
+      - 9093:9091 # needed if metrics enabled
+    environment:
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+      - ZKEVM_NODE_SEQUENCESENDER_L2COINBASE=${SEQUENCER_ADDR}
+      - ZKEVM_NODE_AGGREGATOR_SENDERADDRESS=${AGGREGATOR_ADDR}
+    volumes:
+      - ./config/node_config.toml:/app/config.toml:ro
+      - ./config/genesis.json:/app/genesis.json:ro
+    restart: always
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components aggregator"
+    depends_on:
+      zkevm-sync:
+        condition: service_started
+
+  zkevm-sequencer:
+    container_name: zkevm-sequencer
+    image: ${ZKEVM_NODE}
+    ports:
+      - 9092:9091 # Metrics
+      - 0.0.0.0:6900:6900 # Datastream
+    environment:
+      - ZKEVM_NODE_SEQUENCESENDER_L2COINBASE=${SEQUENCER_ADDR}    
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+      - ZKEVM_NODE_SEQUENCER_STREAMSERVER_FILENAME=/datastreamer/datastream.bin
+    volumes:
+      - ./config/node_config.toml:/app/config.toml:ro
+      - ./config/genesis.json:/app/genesis.json:ro
+      - ./config/datastreamer:/datastreamer
+    restart: always
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components sequencer"
+    depends_on:
+      zkevm-sync:
+        condition: service_started
+      zkevm-db:
+        condition: service_healthy
+  
+  zkevm-ssender:
+    container_name: zkevm-ssender
+    image: ${ZKEVM_NODE}
+    environment:
+      - ZKEVM_NODE_SEQUENCESENDER_L2COINBASE=${SEQUENCER_ADDR}
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config/sequencer.keystore:/app/sequencer.keystore:ro
+      - ./config/aggregator.keystore:/app/aggregator.keystore:ro
+      - ./config/node_config.toml:/app/config.toml:ro
+      - ./config/genesis.json:/app/genesis.json:ro
+    restart: always
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components \"sequence-sender\""
+    depends_on:
+      zkevm-sequencer:
+        condition: service_started
+
+  zkevm-ethtxmgr:
+    container_name: zkevm-ethtxmgr
+    image: ${ZKEVM_NODE}
+    environment:
+      - ZKEVM_NODE_SEQUENCESENDER_L2COINBASE=${SEQUENCER_ADDR}
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config/sequencer.keystore:/app/sequencer.keystore:ro
+      - ./config/aggregator.keystore:/app/aggregator.keystore:ro
+      - ./config/node_config.toml:/app/config.toml:ro
+      - ./config/genesis.json:/app/genesis.json:ro
+    restart: always
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components \"eth-tx-manager\""
+    depends_on:
+      zkevm-sequencer:
+        condition: service_started
+
+  zkevm-prover:
+    container_name: zkevm-prover
+    image: ${ZKEVM_EXECUTOR}
+    volumes:
+      - ./config/prover_config.json:/usr/src/app/config.json:ro
+      - ./config/prover_config:/mnt/prover:ro
+    command: >
+      zkProver -c /usr/src/app/config.json
+
+  zkevm-bridge:
+    container_name: zkevm-bridge
+    image: ${ZKEVM_BRIDGE}
+    ports:
+      - 8080:8080
+    environment:
+      - ZKEVM_BRIDGE_ETHERMAN_L1URL=${L1_EP}
+      - ZKEVM_BRIDGE_ETHERMAN_L2URLS=http://zkevm-rpc:8123
+      - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONBRIDGEADDRESS=${BRIDGE_ADDR}
+      - ZKEVM_BRIDGE_NETWORKCONFIG_L2POLYGONBRIDGEADDRESSES=${BRIDGE_ADDR}
+      - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONZKEVMADDRESS=${POE_ADDR}
+      - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONZKEVMGLOBALEXITROOTADDRESS=${ZKEVM_GER_ADDR}
+      - ZKEVM_BRIDGE_NETWORKCONFIG_GENBLOCKNUMBER=${GENESIS_BLOCKNUMER}
+      - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONROLLUPMANAGERADDRESS=${ROLLUP_ADDR}
+    volumes:
+      - ./config/bridge_config.toml:/app/config.toml:ro
+      - ./config/claimtx.keystore:/app/claimtx.keystore:ro
+    restart: always
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-bridge run --cfg /app/config.toml"
+    depends_on:
+      zkevm-sync:
+        condition: service_started
+
+  zkevm-bridgeui:
+    container_name: zkevm-bridgeui
+    image: ${ZKEVM_BRIDGEUI}
+    ports:
+      - 8000:80
+    environment:
+      - ETHEREUM_RPC_URL=${L1_EP}
+      - ETHEREUM_BRIDGE_CONTRACT_ADDRESS=${BRIDGE_ADDR}
+      - POLYGON_ZK_EVM_RPC_URL="http://${MY_IP}:8123"
+      - ZKEVM_NETWORKCONFIG_POLYGONZKEVMGLOBALEXITROOTADDRESS=${ZKEVM_GER_ADDR}
+      - POLYGON_ZK_EVM_BRIDGE_CONTRACT_ADDRESS=${BRIDGE_ADDR}
+      - POLYGON_ZK_EVM_NETWORK_ID=1
+      - BRIDGE_API_URL="http://${MY_IP}:8080"
+      - ENABLE_FIAT_EXCHANGE_RATES=false
+      - ETHEREUM_PROOF_OF_EFFICIENCY_CONTRACT_ADDRESS="${POE_ADDR}"
+      - ETHEREUM_FORCE_UPDATE_GLOBAL_EXIT_ROOT=true
+      - ENABLE_DEPOSIT_LIMITS=true
+      - ENABLE_DEPOSIT_WARNING=false
+      - ENABLE_REPORT_FORM=false
+      - ETHEREUM_ROLLUP_MANAGER_ADDRESS="${ROLLUP_ADDR}"
+      - ETHEREUM_EXPLORER_URL="https://sepolia.etherscan.io"
+      - POLYGON_ZK_EVM_EXPLORER_URL="http://${MY_IP}:4004"
+      - ENABLE_OUTDATED_NETWORK_MODAL=false
+    restart: always
+    depends_on:
+      zkevm-bridge:
+        condition: service_started
+
+  zkevm-explorer:
+    container_name: zkevm-explorer
+    image: hermeznetwork/zkevm-explorer
+    ports:
+      - 4004:4004
+    environment:
+      - PORT=4004
+      - NETWORK=POE
+      - SUBNETWORK=Polygon zkEVM ETROG
+      - CHAIN_ID=10010
+      - COIN=ETH
+      - ETHEREUM_JSONRPC_VARIANT=geth
+      - ETHEREUM_JSONRPC_HTTP_URL=http://zkevm-rpc:8123
+      - DATABASE_URL=postgres://explorer_user:explorer_password@zkevm-db:5432/explorer_db
+      - ECTO_USE_SSL=false
+      - MIX_ENV=prod
+      - LOGO=/images/blockscout_logo.svg
+      - LOGO_FOOTER=/images/blockscout_logo.svg
+      - SUPPORTED_CHAINS=[]
+      - SHOW_OUTDATED_NETWORK_MODAL=false
+      - DISABLE_INDEXER=false
+      - INDEXER_ZKEVM_BATCHES_ENABLED=true
+    command: ["/bin/sh", "-c", "mix do ecto.create, ecto.migrate; mix phx.server"]
+    depends_on:
+      zkevm-db:
+        condition: service_healthy

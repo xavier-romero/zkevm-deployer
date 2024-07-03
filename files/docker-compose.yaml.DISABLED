@@ -1,0 +1,279 @@
+version: "3.5"
+
+networks:
+  default:
+    name: zkevm
+
+services:
+
+  db-state:
+    container_name: db-state
+    restart: unless-stopped
+    image: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d state_db -U state_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - POSTGRES_USER=state_user
+      - POSTGRES_PASSWORD=state_password
+      - POSTGRES_DB=state_db
+
+  db-hash:
+    container_name: db-hash
+    restart: unless-stopped
+    image: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d hash_db -U hash_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./init_prover_db.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_USER=hash_user
+      - POSTGRES_PASSWORD=hash_password
+      - POSTGRES_DB=hash_db
+
+  db-pool:
+    container_name: db-pool
+    restart: unless-stopped
+    image: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d pool_db -U pool_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - POSTGRES_USER=pool_user
+      - POSTGRES_PASSWORD=pool_password
+      - POSTGRES_DB=pool_db
+
+  db-bridge:
+    container_name: db-bridge
+    restart: unless-stopped
+    image: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d bridge_db -U bridge_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - POSTGRES_USER=bridge_user
+      - POSTGRES_PASSWORD=bridge_password
+      - POSTGRES_DB=bridge_db
+
+  db-explorer:
+    container_name: db-explorer
+    restart: unless-stopped
+    image: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d explorer_db -U explorer_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - POSTGRES_USER=explorer_user
+      - POSTGRES_PASSWORD=explorer_password
+      - POSTGRES_DB=explorer_db
+
+  executor:
+    container_name: executor
+    restart: unless-stopped
+    image: $ZKPROVER_IMAGE
+    depends_on:
+      db-hash:
+        condition: service_healthy
+    ports:
+      - 50061:50061 # MT
+      - 50071:50071 # Executor
+    volumes:
+      - ./executor.json:/usr/src/app/config.json
+    command: >
+      zkProver -c /usr/src/app/config.json
+
+  synchronizer:
+    container_name: synchronizer
+    restart: unless-stopped
+    depends_on:
+      db-state:
+        condition: service_healthy
+      db-pool:
+        condition: service_healthy
+      executor:
+        condition: service_started
+    image: $NODE_IMAGE
+    environment:
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./genesis.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components synchronizer"
+
+  sequencer:
+    container_name: sequencer
+    restart: unless-stopped
+    depends_on:
+      db-state:
+        condition: service_healthy
+      db-pool:
+        condition: service_healthy
+      executor:
+        condition: service_started
+    image: $NODE_IMAGE
+    environment:
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./genesis.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components sequencer,sequencesender"
+
+  l2gaspricer:
+    container_name: l2gaspricer
+    restart: unless-stopped
+    depends_on:
+      db-pool:
+        condition: service_healthy
+    image: $NODE_IMAGE
+    environment:
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./genesis.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components l2gaspricer"
+
+  ethtxmanager:
+    container_name: ethtxmanager
+    restart: unless-stopped
+    depends_on:
+      db-pool:
+        condition: service_healthy
+    image: $NODE_IMAGE
+    environment:
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./genesis.json:/app/genesis.json
+      - ./sequencer.keystore:/app/sequencer.keystore
+      - ./aggregator.keystore:/app/aggregator.keystore
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components eth-tx-manager"
+
+  rpc:
+    container_name: rpc
+    restart: unless-stopped
+    depends_on:
+      db-pool:
+        condition: service_healthy
+      executor:
+        condition: service_started
+      l2gaspricer:
+        condition: service_started
+    image: $NODE_IMAGE
+    ports:
+      - 8545:8545
+    environment:
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./genesis.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components rpc --http.api \"eth,net,zkevm,txpool,web3,debug\""
+
+  aggregator:
+    container_name: aggregator
+    restart: unless-stopped
+    depends_on:
+      executor:
+        condition: service_started
+    image: $NODE_IMAGE
+    environment:
+      - ZKEVM_NODE_ETHERMAN_URL=${L1_EP}
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./genesis.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components aggregator"
+
+  bridge-api:
+    container_name: bridge-api
+    restart: unless-stopped
+    depends_on:
+      db-bridge:
+        condition: service_healthy
+      rpc:
+        condition: service_started
+    image: $BRIDGE_IMAGE
+    ports:
+      - 8080:8080
+    volumes:
+      - ./bridge.toml:/app/config.toml
+      - ./claimtx.keystore:/app/claimtxmanager.keystore
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-bridge run --cfg /app/config.toml"
+
+  bridge-ui:
+    container_name: bridge-ui
+    restart: unless-stopped
+    depends_on:
+      bridge-api:
+        condition: service_started
+    image: $BRIDGEUI_IMAGE
+    ports:
+      - 80:80
+    environment:
+      - ETHEREUM_RPC_URL=${L1_EP}
+      - ETHEREUM_EXPLORER_URL="http://foo"
+      - ETHEREUM_BRIDGE_CONTRACT_ADDRESS=${BR_BRIDGE}
+      - POLYGON_ZK_EVM_RPC_URL="http://localhost:8545"
+      - POLYGON_ZK_EVM_EXPLORER_URL="http://foo"
+      - POLYGON_ZK_EVM_BRIDGE_CONTRACT_ADDRESS=${BR_BRIDGE}
+      - POLYGON_ZK_EVM_NETWORK_ID=1
+      - BRIDGE_API_URL="http://bridge-api:8080"
+      - ENABLE_FIAT_EXCHANGE_RATES=false
+      - ETHEREUM_PROOF_OF_EFFICIENCY_CONTRACT_ADDRESS=${BR_POE}
+      - ENABLE_OUTDATED_NETWORK_MODAL=false
+      - ETHEREUM_FORCE_UPDATE_GLOBAL_EXIT_ROOT=true
+      - ENABLE_DEPOSIT_LIMITS=true
+      - ENABLE_DEPOSIT_WARNING=false
+      - ENABLE_REPORT_FORM=false
+
+  explorer:
+    container_name: explorer
+    image: hermeznetwork/zkevm-explorer:latest
+    ports:
+      - 8000:8000
+    environment:
+      - PORT=8000
+      - NETWORK=POE
+      - SUBNETWORK=Polygon zkEVM
+      - CHAIN_ID=${CHAINID}
+      - COIN=ETH
+      - ETHEREUM_JSONRPC_VARIANT=geth
+      - ETHEREUM_JSONRPC_HTTP_URL=http://rpc:8545
+      - DATABASE_URL=postgres://explorer_user:explorer_password@db-explorer:5432/explorer_db
+      - ECTO_USE_SSL=false
+      - MIX_ENV=prod
+      - LOGO=/images/blockscout_logo.svg
+      - LOGO_FOOTER=/images/blockscout_logo.svg
+      - SUPPORTED_CHAINS=[]
+      - SHOW_OUTDATED_NETWORK_MODAL=false
+    command: ["/bin/sh", "-c", "mix do ecto.create, ecto.migrate; mix phx.server"]

@@ -1,0 +1,3 @@
+[submodule "zkevm-contracts"]
+	url = git@github.com:0xPolygonHermez/zkevm-contracts.git
+	path = zkevm-contracts

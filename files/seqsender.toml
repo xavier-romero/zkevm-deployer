@@ -1,0 +1,40 @@
+[Log]
+Environment = "development"
+Level = "info"
+Outputs = ["stdout"]
+
+[SequenceSender]
+IsValidiumMode = false
+WaitPeriodSendSequence = "15s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
+L1BlockTimestampMargin = "120s"
+MaxTxSizeForL1 = 131072
+L2Coinbase =  "foo"
+PrivateKey = {Path = "/app/sequencer.keystore", Password = "test"}
+SequencesTxFileName = "/app/data/sequencesender.json"
+GasOffset = 80000
+WaitPeriodPurgeTxFile = "48h"
+MaxPendingTx = 1
+MaxBatchesForL1 = 300
+	[SequenceSender.StreamClient]
+		Server = "zkevm-rpc-1:6900"
+	[SequenceSender.EthTxManager]
+		FrequencyToMonitorTxs = "1s"
+		WaitTxToBeMined = "2m"
+		GetReceiptMaxTime = "250ms"
+		GetReceiptWaitInterval = "1s"
+		PrivateKeys = [
+			{Path = "/app/sequencer.keystore", Password = "test"},
+		]
+		ForcedGas = 0
+		GasPriceMarginFactor = 1
+		MaxGasPriceLimit = 0
+		PersistenceFilename = "/app/data/ethtxmanager.json"
+		ReadPendingL1Txs = false
+		SafeStatusL1NumberOfBlocks = 0
+		FinalizedStatusL1NumberOfBlocks = 0
+			[SequenceSender.EthTxManager.Etherman]
+				URL = "foo"
+				MultiGasProvider = false
+				L1ChainID =  0
+				HTTPHeaders = []

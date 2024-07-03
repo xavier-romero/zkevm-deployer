@@ -1,0 +1,152 @@
+IsTrustedSequencer = true
+
+[Log]
+Environment = "production"
+Level = "${LOGLEVEL}"
+Outputs = ["stdout"]
+
+[StateDB]
+User = "${STATEDB_USER}"
+Password = "${STATEDB_PASS}"
+Name = "${STATEDB_NAME}"
+Host = "${STATEDB_HOST}"
+Port = "5432"
+EnableLog = false
+MaxConns = 200
+
+[Pool]
+MaxTxBytesSize = 100132
+MaxTxDataBytesSize = 100000
+MinAllowedGasPriceInterval = "5m"
+PollMinAllowedGasPriceInterval = "1s"
+IntervalToRefreshBlockedAddresses = "5m"
+AccountQueue = 0
+GlobalQueue = 0
+	[Pool.DB]
+	User = "${POOLDB_USER}"
+	Password = "${POOLDB_PASS}"
+	Name = "${POOLDB_NAME}"
+	Host = "${POOLDB_HOST}"
+	Port = "5432"
+	EnableLog = false
+	MaxConns = 200
+
+[Etherman]
+URL = "${L1_URL}"
+MultiGasProvider = false
+	[Etherscan]
+		ApiKey = ""
+
+[RPC]
+Host = "0.0.0.0"
+Port = 8545
+ReadTimeout = "${READTIMEOUT}"
+WriteTimeout = "${WRITETIMEOUT}"
+MaxRequestsPerIPAndSecond = 300
+SequencerNodeURI = ""
+	[RPC.WebSockets]
+		Enabled = true
+		Port = 8546
+
+[Synchronizer]
+SyncInterval = "5s"
+SyncChunkSize = 100
+TrustedSequencerURL = ""
+
+[Sequencer]
+WaitPeriodPoolIsEmpty = "1s"
+BlocksAmountForTxsToBeDeleted = 100
+FrequencyToCheckTxsForDelete = "12h"
+MaxTxsPerBatch = 300
+MaxBatchBytesSize = 120000
+MaxCumulativeGasUsed = 30000000
+MaxKeccakHashes = 2145
+MaxPoseidonHashes = 252357
+MaxPoseidonPaddings = 135191
+MaxMemAligns = 236585
+MaxArithmetics = 236585
+MaxBinaries = 473170
+MaxSteps = 7570538
+WeightBatchBytesSize = 1
+WeightCumulativeGasUsed = 1
+WeightKeccakHashes = 1
+WeightPoseidonHashes = 1
+WeightPoseidonPaddings = 1
+WeightMemAligns = 1
+WeightArithmetics = 1
+WeightBinaries = 1
+WeightSteps = 1
+TxLifetimeCheckTimeout = "10m"
+MaxTxLifetime = "3h"
+	[Sequencer.Finalizer]
+		GERDeadlineTimeout = "90s"
+		ForcedBatchDeadlineTimeout = "${FORCEDBATCHDEADLINETIMEOUT}"
+		SleepDuration = "100ms"
+		ResourcePercentageToCloseBatch = 10
+		GERFinalityNumberOfBlocks = 30
+		ClosingSignalsManagerWaitForCheckingL1Timeout = "300s"
+		ClosingSignalsManagerWaitForCheckingGER = "30s"
+		ClosingSignalsManagerWaitForCheckingForcedBatches = "${CSMWFCFB}"
+		ForcedBatchesFinalityNumberOfBlocks = ${FORCEDBATCHESFINALITYNUMBEROFBLOCKS}
+		TimestampResolution = "${TIMESTAMPRESOLUTION}"
+	[Sequencer.DBManager]
+		PoolRetrievalInterval = "500ms"
+		L2ReorgRetrievalInterval = "5s"
+	[Sequencer.Worker]
+		ResourceCostMultiplier = 1000
+
+[SequenceSender]
+WaitPeriodSendSequence = "60s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "600s"
+MaxTxSizeForL1 = 131072
+SenderAddress = "${SEQ_ADDR}"
+PrivateKeys = [{Path = "/app/sequencer.keystore", Password = "${SEQ_KEYSTORE_PASSW}"}]
+
+[Aggregator]
+Host = "0.0.0.0"
+Port = 50081
+RetryTime = "5s"
+VerifyProofInterval = "25m"
+TxProfitabilityCheckerType = "acceptall"
+TxProfitabilityMinReward = "1.1"
+ProofStatePollingInterval = "5s"
+SenderAddress = "${AGGR_ADDR}"
+CleanupLockedProofsInterval = "2m"
+GeneratingProofCleanupThreshold = "15m"
+
+[EthTxManager]
+FrequencyToMonitorTxs = "1s"
+WaitTxToBeMined = "2m"
+ForcedGas = 0
+PrivateKeys = [
+	{Path = "/app/sequencer.keystore", Password = "${SEQ_KEYSTORE_PASSW}"},
+	{Path = "/app/aggregator.keystore", Password = "${AGGR_KEYSTORE_PASSW}"}
+]
+
+[L2GasPriceSuggester]
+Type = "follower"
+UpdatePeriod = "10s"
+Factor = 0.2
+DefaultGasPriceWei = 50000000
+
+[MTClient]
+URI  = "${STATE_URL}"
+
+[Executor]
+URI = "${EXECUTOR_URL}"
+MaxGRPCMessageSize = ${MAXGRPCMESSAGESIZE}
+
+[Metrics]
+Host = "0.0.0.0"
+Port = 9091
+Enabled = true
+
+[EventLog]
+	[EventLog.DB]
+	User = "${EVENTDB_USER}"
+	Password = "${EVENTDB_PASS}"
+	Name = "${EVENTDB_NAME}"
+	Host = "${EVENTDB_HOST}"
+	Port = "5432"
+	EnableLog = false
+	MaxConns = 200
