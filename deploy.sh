@@ -88,6 +88,7 @@ fi
 echo "Deployment"
 cd $CONTRACTS_REPO || exit
 rm -fr node_modules
+rm -f ./deployment/v2/deploy_ongoing.json
 npm i
 # node deployment/1_createGenesis.js --test
 if [[ $FORKID -ge 7 ]]

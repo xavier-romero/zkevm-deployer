@@ -49,7 +49,7 @@ IS_VALIDIUM=false \
 REAL_VERIFIER=true \
 NETWORK_NAME=erigon-network6 CHAINID=9631 FORKID=9 \
 NETWORK=sepolia \
-NODE_TAG=v0.7.0 PROVER_TAG=v6.0.3-RC18 ERIGON_TAG=\
+NODE_TAG=v0.7.0 PROVER_TAG=v6.0.3-RC18 ERIGON_TAG=20240703001110-e2ffe0b \
 FUNDED_ACCOUNT=0x**************************************** \
 FUNDED_PRVKEY=**************************************************************** \
 INFURA_KEY=**************************** \
@@ -59,7 +59,8 @@ ETHERSCAN_API_KEY=************************ \
 IS_VALIDIUM=true \
 REAL_VERIFIER=true \
 NETWORK_NAME=erigon-cdk2 CHAINID=452 FORKID=9 \
-NODE_TAG=v0.7.0 PROVER_TAG=v6.0.3-RC18 NETWORK=sepolia \
+NETWORK=sepolia \
+NODE_TAG=v0.7.0 PROVER_TAG=v6.0.3-RC18 ERIGON_TAG=20240703001110-e2ffe0b \
 KS_PASS_DAC=test KS_PASS_SEQ=test KS_PASS_AGR=test KS_PASS_CTM=test \
 FUNDED_ACCOUNT=0x**************************************** \
 FUNDED_PRVKEY=**************************************************************** \
