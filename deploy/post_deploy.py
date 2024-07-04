@@ -157,7 +157,7 @@ def generate_erigon_files():
 
     erigon_dyn_chainspec = {
         "ChainName": network_name,
-        "chainId": l2_chainid,
+        "chainId": int(l2_chainid),
         "consensus": "ethash",
         "homesteadBlock": 0,
         "daoForkBlock": 0,

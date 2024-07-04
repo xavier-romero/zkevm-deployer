@@ -22,6 +22,10 @@ CREATE USER explorer_user with password 'explorer_password';
 CREATE DATABASE explorer_db OWNER explorer_user;
 grant all privileges on database explorer_db to explorer_user;
 
+CREATE USER dac_user with password 'dac_password';
+CREATE DATABASE dac_db OWNER dac_user;
+grant all privileges on database dac_db to dac_user;
+
 CREATE USER aggregator_user with password 'aggregator_password';
 CREATE DATABASE aggregator_db OWNER aggregator_user;
 grant all privileges on database aggregator_db to aggregator_user;

@@ -4,7 +4,7 @@ Level = "info"
 Outputs = ["stdout"]
 
 [SequenceSender]
-IsValidiumMode = false
+IsValidiumMode = true
 WaitPeriodSendSequence = "15s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
 L1BlockTimestampMargin = "120s"
@@ -17,7 +17,7 @@ WaitPeriodPurgeTxFile = "48h"
 MaxPendingTx = 1
 MaxBatchesForL1 = 300
 	[SequenceSender.StreamClient]
-		Server = "zkevm-rpc-1:6900"
+		Server = "cdk1-seq:6900"
 	[SequenceSender.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
 		WaitTxToBeMined = "2m"

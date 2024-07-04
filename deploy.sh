@@ -49,7 +49,7 @@ export ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
 # Vars used for Docker
 export NODE_IMAGE=hermeznetwork/zkevm-node:${NODE_TAG}
 export ZKPROVER_IMAGE=hermeznetwork/zkevm-prover:${PROVER_TAG}
-export BRIDGE_IMAGE=hermeznetwork/zkevm-bridge-service:${BRIDGE_TAG:-v0.4.2}
+export BRIDGE_IMAGE=hermeznetwork/zkevm-bridge-service:${BRIDGE_TAG:-v0.4.3-RC1}
 export BRIDGEUI_IMAGE=hermeznetwork/zkevm-bridge-ui:${BRIDGEUI_TAG:-etrog-v2}
 export ERIGON_IMAGE=hermeznetwork/cdk-erigon:${ERIGON_TAG:-2.0.0-beta3}
 
@@ -132,7 +132,13 @@ cd $DOCKERDIR
 mkdir config
 mkdir config/datastreamer
 mkdir config/erigon_seq-datadir
+chmod 777 -R config/erigon_seq-datadir
+mkdir config/erigon_rpc1-datadir
+chmod 777 -R config/erigon_rpc1-datadir
+mkdir config/erigon_rpc2-datadir
+chmod 777 -R config/erigon_rpc2-datadir
 mkdir config/data-seqsender
+chmod 777 -R config/data-seqsender
 cp -f $OUTPUT_DIR/*.keystore config/
 cp -f $OUTPUT_DIR/node_genesis.json config/genesis.json
 cp -f $ERIGON_DYN_ALLOCS_FILE config/
@@ -158,22 +164,42 @@ GEN_BLOCKNUM=$(cat config/genesis.json | jq .genesisBlockNumber -r)
 ROLLUP_ADDR=$(cat config/genesis.json | jq .l1Config.polygonRollupManagerAddress -r)
 BRIDGE_ADDR=$(cat $OUTPUT_DIR/deploy_output.json | jq .polygonZkEVMBridgeAddress -r)
 
-echo "ZKEVM_ERIGON=$ERIGON_IMAGE
-ZKEVM_NODE=$NODE_IMAGE
-ZKEVM_EXECUTOR=$ZKPROVER_IMAGE
-ZKEVM_BRIDGE=$BRIDGE_IMAGE
-ZKEVM_BRIDGEUI=$BRIDGEUI_IMAGE
-L1_EP=$L1_EP
-SEQUENCER_ADDR=$SEQ_ADDR
-AGGREGATOR_ADDR=$AGGR_ADDR
-BRIDGE_ADDR=$BRIDGE_ADDR
-L1_CHAINID=$L1_CHAINID
-L2_CHAINID=$CHAINID
-ZKEVM_GER_ADDR=$GER_ADDR
-GENESIS_BLOCKNUMER=$GEN_BLOCKNUM
-POE_ADDR=$POE_ADDR
-ROLLUP_ADDR=$ROLLUP_ADDR
-MY_IP=<SET_PUBLIC_IP_HERE>" > .env
+if [[ $IS_VALIDIUM -eq 1 ]]
+then
+    echo "CDK_ERIGON=$ERIGON_IMAGE
+    CDK_NODE=$NODE_IMAGE
+    ZKEVM_EXECUTOR=$ZKPROVER_IMAGE
+    ZKEVM_BRIDGE=$BRIDGE_IMAGE
+    ZKEVM_BRIDGEUI=$BRIDGEUI_IMAGE
+    L1_EP=$L1_EP
+    SEQUENCER_ADDR=$SEQ_ADDR
+    AGGREGATOR_ADDR=$AGGR_ADDR
+    BRIDGE_ADDR=$BRIDGE_ADDR
+    L1_CHAINID=$L1_CHAINID
+    L2_CHAINID=$CHAINID
+    ZKEVM_GER_ADDR=$GER_ADDR
+    GENESIS_BLOCKNUMER=$GEN_BLOCKNUM
+    POE_ADDR=$POE_ADDR
+    ROLLUP_ADDR=$ROLLUP_ADDR
+    MY_IP=<SET_PUBLIC_IP_HERE>" > .env
+else
+    echo "ZKEVM_ERIGON=$ERIGON_IMAGE
+    ZKEVM_NODE=$NODE_IMAGE
+    ZKEVM_EXECUTOR=$ZKPROVER_IMAGE
+    ZKEVM_BRIDGE=$BRIDGE_IMAGE
+    ZKEVM_BRIDGEUI=$BRIDGEUI_IMAGE
+    L1_EP=$L1_EP
+    SEQUENCER_ADDR=$SEQ_ADDR
+    AGGREGATOR_ADDR=$AGGR_ADDR
+    BRIDGE_ADDR=$BRIDGE_ADDR
+    L1_CHAINID=$L1_CHAINID
+    L2_CHAINID=$CHAINID
+    ZKEVM_GER_ADDR=$GER_ADDR
+    GENESIS_BLOCKNUMER=$GEN_BLOCKNUM
+    POE_ADDR=$POE_ADDR
+    ROLLUP_ADDR=$ROLLUP_ADDR
+    MY_IP=<SET_PUBLIC_IP_HERE>" > .env
+fi
 
 cd $WORKINGDIR
 mv $OUTPUT_DIR ${OUTPUT_DIR_PRIVATE_PREFIX}.${NETWORK_NAME}.$(date +%Y%m%d.%H%M%S)
