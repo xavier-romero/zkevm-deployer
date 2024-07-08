@@ -70,7 +70,6 @@ def gen_deployment_pars_file(
         "adminZkEVM": f"{deployment_addr}",
         "forkID": forkid,
         "consensusContract": "PolygonZkEVMEtrog",
-        "consensusContract": "PolygonValidiumEtrog",
         "gasTokenAddress": "",
         "deployerPvtKey": "",
         "maxFeePerGas": "",
@@ -79,7 +78,8 @@ def gen_deployment_pars_file(
     }
     if is_validium:
         create_rollup_parameters["consensusContract"] = "PolygonValidiumEtrog"
-        create_rollup_parameters["dataAvailabilityProtocol"] = "PolygonDataCommittee"
+        create_rollup_parameters["dataAvailabilityProtocol"] = \
+            "PolygonDataCommittee"
 
     deployment_parameters = {
         "test": True,
@@ -184,7 +184,7 @@ def set_balances(deployment_addr, aggregator_addr, sequencer_addr):
         )
         if not deployer_balance:
             say("ERROR: Deployer balance is 0")
-            sys.exit(1) 
+            sys.exit(1)
 
 
 addresses = load_or_create_addresses(
