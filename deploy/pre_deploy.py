@@ -8,7 +8,8 @@ from web3 import Web3
 from utils import load_or_create_addresses, say, transfer, get_eth_balance
 from time import sleep
 
-infura_key = os.getenv('INFURA_KEY')
+# infura_key = os.getenv('INFURA_KEY')
+# sepolia_provider = os.getenv('L1_EP')
 l1_ep = os.getenv('L1_EP')
 funded_account = os.getenv('FUNDED_ACCOUNT')
 funded_prvkey = os.getenv('FUNDED_PRVKEY')
@@ -41,16 +42,17 @@ ks_pass_seq = os.getenv("KS_PASS_SEQ")
 ks_pass_agr = os.getenv("KS_PASS_AGR")
 ks_pass_ctm = os.getenv("KS_PASS_CTM")
 
-if not (infura_key and funded_account and output):
+if not (l1_ep and funded_account and output):
     print("ERROR: Missing env vars")
     sys.exit(1)
 
 
-def gen_env_file(deployment_mnemonic, infura_key):
+def gen_env_file(deployment_mnemonic, l1_ep):
     env_file = open(f"{output}/env", "w")
     env_file.write(
         f'MNEMONIC="{deployment_mnemonic}"\n'
-        f'INFURA_PROJECT_ID="{infura_key}"\n'
+        # f'INFURA_PROJECT_ID="{infura_key}"\n'
+        f'SEPOLIA_PROVIDER="{l1_ep}"\n'
         f'ETHERSCAN_API_KEY="{etherscan_apikey}"\n'
     )
     env_file.close()
@@ -196,7 +198,7 @@ aggregator_addr = addresses['Aggregator']['addr']
 deployment_addr = addresses['Deployer']['addr']
 
 deployment_mnemonic = addresses['Deployer']['mnemonic']
-gen_env_file(deployment_mnemonic, infura_key)
+gen_env_file(deployment_mnemonic, l1_ep=l1_ep)
 
 gen_deployment_pars_file(
     sequencer_addr, aggregator_addr, deployment_addr, is_validium=is_validium)

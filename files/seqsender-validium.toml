@@ -4,7 +4,7 @@ Level = "info"
 Outputs = ["stdout"]
 
 [SequenceSender]
-IsValidiumMode = false
+IsValidiumMode = true
 WaitPeriodSendSequence = "15s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
 L1BlockTimestampMargin = "120s"

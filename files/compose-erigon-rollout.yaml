@@ -74,7 +74,7 @@ services:
       - ./config/erigon_rpc1-datadir:/Volumes/External/hermez/dev
       - ./config/dynamic-integration-allocs.json:/etc/erigon/dynamic-integration-allocs.json
       - ./config/dynamic-integration-chainspec.json:/etc/erigon/dynamic-integration-chainspec.json
-      - ./config/dynamic-integration-chainspec.json:/etc/erigon/erigon-cdkintegration1-chainspec.json
+      - ./config/dynamic-integration-chainspec.json:/etc/erigon/erigon-???????-chainspec.json
       - ./config/dynamic-integration-conf.json:/etc/erigon/dynamic-integration-conf.json
     ports:
       - 8124:8123
@@ -89,10 +89,10 @@ services:
     image: ${ZKEVM_ERIGON}
     volumes:
       - ./config/erigon.yaml:/etc/erigon/config.yaml:ro
-      - ./config/erigon_rpc1-datadir:/Volumes/External/hermez/dev
+      - ./config/erigon_rpc2-datadir:/Volumes/External/hermez/dev
       - ./config/dynamic-integration-allocs.json:/etc/erigon/dynamic-integration-allocs.json
       - ./config/dynamic-integration-chainspec.json:/etc/erigon/dynamic-integration-chainspec.json
-      - ./config/dynamic-integration-chainspec.json:/etc/erigon/erigon-cdkintegration1-chainspec.json
+      - ./config/dynamic-integration-chainspec.json:/etc/erigon/erigon-????????-chainspec.json
       - ./config/dynamic-integration-conf.json:/etc/erigon/dynamic-integration-conf.json
     ports:
       - 8125:8123
